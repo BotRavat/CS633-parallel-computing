@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     T = atoi(argv[4]);
     seed = atoi(argv[5]);
 
-    double *data_received = (double *)malloc(M * sizeof(double));
+
     double *buffer = (double *)malloc(M * sizeof(double));
     double *bufferUpdatedForD1 = (double *)malloc(M * sizeof(double));
     double *bufferUpdatedForD2 = (double *)malloc(M * sizeof(double));
@@ -49,12 +49,10 @@ int main(int argc, char *argv[])
     srand(seed);
     for (int i = 0; i < M; i++)
     {
-        data_received[i] = (double)rand() * (rank + 1) / 10000.0;
-        // data_received[i] = 10;
-        bufferUpdatedForD1[i] = data_received[i];
-        bufferUpdatedForD2[i] = data_received[i];
-        dataReceivedByD1[i] = data_received[i];
-        dataReceivedByD2[i] = data_received[i];
+        bufferUpdatedForD1[i] = (double)rand() * (rank + 1) / 10000.0;
+        bufferUpdatedForD2[i] =  bufferUpdatedForD1[i];
+        dataReceivedByD1[i] = bufferUpdatedForD1[i];
+        dataReceivedByD2[i] = bufferUpdatedForD2[i];
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -117,7 +115,6 @@ int main(int argc, char *argv[])
 
             for (int i = 0; i < M; i++)
             {
-                data_received[i] = buffer[i];
                 dataReceivedByD1[i] = buffer[i];
             }
         }
@@ -129,7 +126,6 @@ int main(int argc, char *argv[])
 
             for (int i = 0; i < M; i++)
             {
-                data_received[i] += buffer[i];
                 dataReceivedByD2[i] = buffer[i];
             }
         }
@@ -138,14 +134,14 @@ int main(int argc, char *argv[])
         {
             for (int i = 0; i < M; i++)
             {
-                bufferUpdatedForD1[i] = (unsigned long long)data_received[i] % 100000;
+                bufferUpdatedForD1[i] = (unsigned long long)dataReceivedByD1[i] % 100000;
             }
         }
         if (validSenderForD2)
         {
             for (int i = 0; i < M; i++)
             {
-                bufferUpdatedForD2[i] = data_received[i] * 100000;
+                bufferUpdatedForD2[i] = dataReceivedByD2[i] * 100000;
             }
         }
     }
@@ -154,7 +150,6 @@ int main(int argc, char *argv[])
     double t_end = MPI_Wtime();
     double local_time = t_end - t_start;
 
-    /* ---------------- Gather results at rank 0 ---------------- */
     if (rank != 0)
     {
         if (rank + D1 < size)
@@ -190,11 +185,10 @@ int main(int argc, char *argv[])
                 max_val_at_D2 = fmax(max_val_at_D2, finalMaxValues[1]);
             }
         }
-
+        printf("Input parameters: M=%d D1=%d D2=%d T=%d seed=%d\n", M, D1, D2, T, seed);
         printf("%lf %lf %lf\n", max_val_at_D1, max_val_at_D2, local_time);
     }
 
-    free(data_received);
     free(buffer);
 
     MPI_Finalize();
