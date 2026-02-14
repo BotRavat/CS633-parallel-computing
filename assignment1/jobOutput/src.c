@@ -4,15 +4,15 @@
 #include <math.h>
 #include <float.h>
 
-double maxFromArray(double *arr, int n)
+double get_max_from_array(double *arr, int n)
 {
-    double maxValue = DBL_MIN;
+    double max_val = DBL_MIN;
     for (int i = 0; i < n; i++)
     {
-        if (arr[i] > maxValue)
-            maxValue = arr[i];
+        if (arr[i] > max_val)
+            max_val = arr[i];
     }
-    return maxValue;
+    return max_val;
 }
 
 int main(int argc, char *argv[])
@@ -57,19 +57,26 @@ int main(int argc, char *argv[])
         dataReceivedByD2[i] = bufferUpdatedForD2[i];
     }
 
-    double startTime = MPI_Wtime();
+    // MPI_Barrier(MPI_COMM_WORLD);
+    double t_start = MPI_Wtime();
 
     for (int iter = 0; iter < T; iter++)
     {
-        // two batches one for D1 and second for D2, each batch has 2 phases
+
         // batch1   distance =d1=2
         // sender ranks = 0,1,4,5,8,9,...
         // receiver ranks = 2,3,6,7,10,11,...
-        
         int isSenderD1P1 = ((rank / D1) % 2 == 0) && (rank + D1 < size);
         int isReceiverD1P1 = ((rank / D1) % 2 == 1) && (rank - D1 >= 0);
 
+        // batch2   distance =d2=4
+        // sender ranks = 0,1,2,3,8,9,10,11,...
+        // receiver ranks = 4,5,6,7,12,13,14,15,...
+        int isSenderD2P1 = ((rank / D2) % 2 == 0) && (rank + D2 < size);
+        int isReceiverD2P1 = ((rank / D2) % 2 == 1) && (rank - D2 >= 0);
+
         // batch1 phase1
+
         if (isSenderD1P1)
         {
             MPI_Send(bufferUpdatedForD1, M, MPI_DOUBLE,
@@ -128,12 +135,6 @@ int main(int argc, char *argv[])
                 bufferUpdatedForD1[i] = (unsigned long long)dataReceivedFromD1[i] % 100000;
             }
         }
-
-        // batch2   distance =d2=4
-        // sender ranks = 0,1,2,3,8,9,10,11,...
-        // receiver ranks = 4,5,6,7,12,13,14,15,...
-        int isSenderD2P1 = ((rank / D2) % 2 == 0) && (rank + D2 < size);
-        int isReceiverD2P1 = ((rank / D2) % 2 == 1) && (rank - D2 >= 0);
 
         // batch2 phase1
         if (isSenderD2P1)
@@ -203,12 +204,12 @@ int main(int argc, char *argv[])
         {
             if (rank + D2 < size)
             {
-                finalMaxValues[0] = fmax(DBL_MIN, maxFromArray(bufferUpdatedForD1, M));
-                finalMaxValues[1] = fmax(DBL_MIN, maxFromArray(bufferUpdatedForD2, M));
+                finalMaxValues[0] = fmax(DBL_MIN, get_max_from_array(bufferUpdatedForD1, M));
+                finalMaxValues[1] = fmax(DBL_MIN, get_max_from_array(bufferUpdatedForD2, M));
             }
             else
             {
-                finalMaxValues[0] = fmax(DBL_MIN, maxFromArray(bufferUpdatedForD1, M));
+                finalMaxValues[0] = fmax(DBL_MIN, get_max_from_array(bufferUpdatedForD1, M));
                 finalMaxValues[1] = DBL_MIN;
             }
 
@@ -217,15 +218,17 @@ int main(int argc, char *argv[])
     }
     else
     {
+        // double max_val_at_D1 = fmax(DBL_MIN, dataReceivedByD1[0]);
+        // double max_val_at_D2 = fmax(DBL_MIN, dataReceivedByD2[0]);
         double max_val_at_D1 = DBL_MIN;
         double max_val_at_D2 = DBL_MIN;
 
         if (0 + D1 < size)
         {
-            max_val_at_D1 = fmax(max_val_at_D1, maxFromArray(bufferUpdatedForD1, M));
+            max_val_at_D1 = fmax(max_val_at_D1, get_max_from_array(bufferUpdatedForD1, M));
             if (0 + D2 < size)
             {
-                max_val_at_D2 = fmax(max_val_at_D2, maxFromArray(bufferUpdatedForD2, M));
+                max_val_at_D2 = fmax(max_val_at_D2, get_max_from_array(bufferUpdatedForD2, M));
             }
         }
 
@@ -240,10 +243,11 @@ int main(int argc, char *argv[])
             }
         }
 
-        double endTime = MPI_Wtime();
-        double executionTime = endTime - startTime;
+        double t_end = MPI_Wtime();
+        double local_time = t_end - t_start;
 
-        printf("%lf %lf %lf\n", max_val_at_D1, max_val_at_D2, executionTime);
+        // printf("Input parameters: M=%d D1=%d D2=%d T=%d seed=%d\n", M, D1, D2, T, seed);
+        printf("%lf %lf %lf\n", max_val_at_D1, max_val_at_D2, local_time);
     }
 
     free(buffer);
@@ -258,3 +262,4 @@ int main(int argc, char *argv[])
     MPI_Finalize();
     return 0;
 }
+
