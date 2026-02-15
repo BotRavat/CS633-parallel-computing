@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=job633
+#SBATCH --job-name=P32_M1048k
 #SBATCH -N 2
 #SBATCH --ntasks-per-node=16
-#SBATCH --output=job633_%j.out
-#SBATCH --error=job633_%j.err
+#SBATCH --output=P32_M1048k_%j.out
+#SBATCH --error=P32_M1048k_%j.err
 #SBATCH --partition=cpu
 #SBATCH --time=00:10:00
 
